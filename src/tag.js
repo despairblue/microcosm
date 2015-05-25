@@ -4,9 +4,10 @@
  */
 
 const uid = require('uid')
+const fallback = 'microcosm_action'
 
 module.exports = function(fn) {
-  let name = fn.name || 'microcosm_action'
+  let name = fn.name || fallback
   let mark = uid()
 
   if (!fn.hasOwnProperty('toString')) {

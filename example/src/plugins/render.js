@@ -7,17 +7,16 @@ import React  from 'react'
 import Layout from '../views/layout'
 
 export default {
-
-  render(app, el) {
-    React.render(<Layout app={ app } { ...app.toObject() }/>, el)
+  didStart(app) {
+    this.render(app)
   },
 
-  register(app, { el }, next) {
-    app.listen(() => this.render(app, el))
+  didDispatch(app) {
+    this.render(app)
+  },
 
-    this.render(app, el)
-
-    next()
+  render(app) {
+    React.render(<Layout app={ app } { ...app.toObject() }/>,
+                 this.options.el)
   }
-
 }

@@ -1,4 +1,5 @@
-const uid = require('uid')
+const uid  = require('uid')
+const skip = () => {}
 
 function Plugin(config, options) {
   for (var i in config) {
@@ -10,7 +11,11 @@ function Plugin(config, options) {
 }
 
 Plugin.prototype = {
-  start(app, next) {
+  didStart     : skip,
+  willDispatch : skip,
+  didDispatch  : skip,
+
+  _start(app, next) {
     return this.register(app, this.options, next)
   },
 

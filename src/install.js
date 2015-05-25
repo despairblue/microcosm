@@ -6,7 +6,7 @@
 let install = function ([plugin, ...tail], app, callback) {
   if (!plugin) return callback()
 
-  plugin.start(app, function(err) {
+  plugin._start(app, function(err) {
     if (err) throw err
     install(tail, app, callback)
   })

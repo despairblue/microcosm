@@ -8,10 +8,16 @@ function Signal (action, params) {
     throw TypeError(`${ action } is not a function. Was app.push() called with the wrong value?`)
   }
 
-  this.value = action(...params)
+  this.action   = action
+  this.params   = params
+  this.value    = action(...params)
 }
 
 Signal.prototype = {
+  toString() {
+    return this.action.toString()
+  },
+
   pipe(next) {
     let { value } = this
 

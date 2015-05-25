@@ -13,7 +13,6 @@ const run     = require('./run')
 const tag     = require('./tag')
 
 class Microcosm extends Foliage {
-
   constructor() {
     super()
 
@@ -142,6 +141,8 @@ class Microcosm extends Foliage {
     // Queue plugins and then notify that installation has finished
     install(this.plugins, this, () => run(callbacks, [], this, 'start'))
 
+    this._lifecycle('didStart', this)
+
     return this
   }
 
@@ -155,7 +156,11 @@ class Microcosm extends Foliage {
    */
   push(action, ...params) {
     let signal = new Signal(action, params)
-    return signal.pipe(result => this.dispatch(action, result))
+
+    return signal.pipe(result => {
+      this._lifecycle('willDispatch', this, action, signal, result)
+      this.dispatch(action, result, signal)
+    })
   }
 
   /**
@@ -177,27 +182,29 @@ class Microcosm extends Foliage {
    * This will trigger a change event if any of the stores return a new
    * state.
    *
-   * Normally, this function is not called directly. `dispatch` is fire and
-   * forget. For almost every use case, `app.push` should be instead as it
-   * provides a mechanism for error handing and callbacks.
-   *
    * @private
    * @param action - An action function. This will used by Store::register
    * @param payload - Data to send to stores associated with the action
    * @return payload
    */
-  dispatch(action, payload) {
+  dispatch(action, result, signal) {
     tag(action)
 
     for (let key in this.stores) {
       let state = this.get(key)
       let store = this.stores[key]
 
-      this.set(key, store.send(state, action, payload))
+      this.set(key, store.send(state, action, result))
       this.volley()
     }
 
-    return payload
+    this._lifecycle('didDispatch', this, action, signal, result)
+
+    return result
+  }
+
+  _lifecycle(method, ...params) {
+    this.plugins.forEach(plugin => plugin[method].apply(plugin, params))
   }
 
 }

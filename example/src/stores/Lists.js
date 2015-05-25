@@ -1,6 +1,5 @@
-import Lists    from '../actions/lists'
-import contrast from '../../lib/contrast'
-import uid      from 'uid'
+import List  from '../models/list'
+import Lists from 'actions/lists'
 
 export default {
 
@@ -16,19 +15,11 @@ export default {
   },
 
   add(state, params) {
-    let record = {
-      id    : uid(),
-      color : '#aaaaaa',
-      ...params
-    }
-
-    record.contrast = contrast(record.color)
-
-    return state.concat(record)
+    return state.concat(new List(params))
   },
 
   remove(state, id) {
-    return state.filter(i => i.id !== id)
+    return state.filter(list => list.id !== id)
   }
 
 }
