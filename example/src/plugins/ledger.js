@@ -1,8 +1,3 @@
-/**
- * Render
- * Render changes to the screen
- */
-
 var commits = []
 
 export default {
