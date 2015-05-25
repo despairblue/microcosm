@@ -4,6 +4,7 @@ import App     from 'App'
 import Router  from 'plugins/router'
 import Storage from 'plugins/storage'
 import Render  from 'plugins/render'
+import Ledger  from 'plugins/ledger'
 
 // Each app is a unique instance.
 // It will get its own state, useful for having multiple apps on
@@ -18,6 +19,9 @@ app.addPlugin(Storage)
 
 // Pushes route actions as they occur
 app.addPlugin(Router)
+
+// Store history
+app.addPlugin(Ledger)
 
 // Render changes to the screen
 app.addPlugin(Render, {

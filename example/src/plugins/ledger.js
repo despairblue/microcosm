@@ -3,36 +3,28 @@
  * Render changes to the screen
  */
 
-import React  from 'react'
-import Layout from '../views/layout'
-
-var signals = []
-
-var play = window.play = function() {
-  app.reset()
-
-  signals.forEach(function(signal, i) {
-    setTimeout(function() {
-      signal.pipe(result => app.dispatch(signal.action, result))
-    }, i * 500)
-  })
-}
+var commits = []
 
 export default {
 
-  actionWillDispatch(app, signal) {
-    signals.push(signal)
+  willDispatch(app, signal, action, result) {
+    commits.push({ signal, action, result })
   },
 
-  render(app, el) {
-    React.render(<Layout app={ app } { ...app.toObject() }/>, el)
-  },
+  register(app, _, next) {
 
-  register(app, { el }, next) {
-    window.app = app
-    app.listen(() => this.render(app, el))
+    window.replay = function() {
+      console.log('Replaying...')
 
-    this.render(app, el)
+      app.reset()
+
+      commits.forEach(function({ action, result }, i) {
+        setTimeout(function() {
+          console.log('%s. %s', i, action)
+          app.dispatch(action, result)
+        }, i * 500)
+      })
+    }
 
     next()
   }
