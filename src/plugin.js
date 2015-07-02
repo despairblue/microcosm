@@ -14,7 +14,13 @@ module.exports = function PluginFactory(config, options, app) {
     this.options = options
   }
 
-  Plugin.prototype = config
+  Plugin.prototype = Object.assign({
+
+    register(app, options, next) {
+      next()
+    }
+    
+  }, config
 
   if (process.env.NODE_ENV !== 'production' && typeof config.register !== 'function') {
     throw new TypeError("Plugins must include a register method.")

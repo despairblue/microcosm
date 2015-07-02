@@ -59,7 +59,9 @@ Microcosm.prototype = {
    * Remove invalid transactions
    */
   clean() {
+    this.lifecycle('instanceWillClean')
     this.transactions = this.transactions.filter(this.transactionIsValid)
+    this.lifecycle('instanceDidClean')
   },
 
   /**
@@ -67,9 +69,19 @@ Microcosm.prototype = {
    * base state and remove them from the transaction list.
    */
   squash() {
+    this.lifecycle('willSquash')
+
+    let squashed = []
+
     while (this.transactions.length && this.shouldTransactionMerge(this.transactions[0], this.transactions)) {
-      this.base = this.dispatch(this.base, this.transactions.shift())
+      let squashable = this.transactions.shift()
+
+      this.base = this.dispatch(this.base, squashable)
+
+      squashed.push(squashable)
     }
+
+    this.lifecycle('didSquash', [ this, squashed])
   },
 
   /**
@@ -81,8 +93,10 @@ Microcosm.prototype = {
                                 .reduce(this.dispatch.bind(this), this.base)
 
     if (next !== this.state) {
+      this.lifecycle('willUpdate')
       this.state = next
       this.emit(this.state)
+      this.lifecycle('didUpdate')
     }
   },
 
@@ -94,13 +108,13 @@ Microcosm.prototype = {
    * 3. Roll outstanding changes forward into new state
    */
   transact() {
-    this.lifecycle('willUpdate')
+    this.lifecycle('willTransact')
 
     this.clean()
     this.squash()
     this.rollforward()
 
-    this.lifecycle('didUpdate')
+    this.lifecycle('didTransact')
   },
 
   /**
@@ -229,6 +243,8 @@ Microcosm.prototype = {
    *    generated if installing plugins fails.
    */
   start(...callbacks) {
+    this.lifecycle('willStart')
+
     this.reset()
 
     // Queue plugins and then notify that installation has finished
@@ -241,8 +257,8 @@ Microcosm.prototype = {
     return this
   },
 
-  lifecycle(name) {
-    this.plugins.forEach(plugin => attempt(plugin, name, [ this ]))
+  lifecycle(name, args=[ this ]) {
+    this.plugins.forEach(plugin => attempt(plugin, name, args))
   }
 }
 

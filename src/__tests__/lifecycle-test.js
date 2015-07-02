@@ -2,20 +2,37 @@ import Microcosm from '../Microcosm'
 
 describe('Lifecycle methods', function() {
 
-  it ('tells plugins when an app has started', function(done) {
+  it ('monitors when an app will start', function(done) {
     let app = new Microcosm()
 
+    sinon.spy(app, 'reset')
+
     app.addPlugin({
-      didStart(instance) {
+      willStart(instance) {
+        app.reset.should.not.have.been.called
         instance.should.equal(app)
         done()
-      },
-      register(app, options, next) {
-        next()
       }
     })
 
     app.start()
+  })
+
+  it ('monitors when an app has started, after all callbacks have run', function(done) {
+    let app    = new Microcosm()
+    let called = false
+
+    app.addPlugin({
+      didStart(instance) {
+        called.should.equal(true)
+        instance.should.equal(app)
+        done()
+      }
+    })
+
+    app.start(function() {
+      called = true
+    })
   })
 
   it ('tells plugins when an app has reset', function(done) {
@@ -25,9 +42,6 @@ describe('Lifecycle methods', function() {
       didReset(instance) {
         instance.should.equal(app)
         done()
-      },
-      register(app, options, next) {
-        next()
       }
     })
 
