@@ -9,11 +9,9 @@
 
 module.exports = function PluginFactory(config, options, app) {
 
-  let Plugin = function(callback) {
+  let Plugin = function() {
     this.app = app
     this.options = options
-
-    this.register(this.app, this.options, callback)
   }
 
   Plugin.prototype = config
@@ -22,5 +20,5 @@ module.exports = function PluginFactory(config, options, app) {
     throw new TypeError("Plugins must include a register method.")
   }
 
-  return Plugin
+  return new Plugin()
 }

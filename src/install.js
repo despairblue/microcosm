@@ -8,10 +8,10 @@ let install = function (plugins, done) {
     return done(null)
   }
 
-  let Plugin = plugins[0]
+  let plugin = plugins[0]
   let tail   = plugins.slice(1)
 
-  return new Plugin(function(err) {
+  return plugin.register(plugin.app, plugin.options, function(err) {
     err ? done(err) : install(tail, done)
   })
 }

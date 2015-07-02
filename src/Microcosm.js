@@ -4,6 +4,7 @@ let Transaction = require('./Transaction')
 let install     = require('./install')
 let plugin      = require('./plugin')
 let remap       = require('./remap')
+let attempt     = require('./attempt')
 
 let Microcosm = function() {
   /**
@@ -93,9 +94,13 @@ Microcosm.prototype = {
    * 3. Roll outstanding changes forward into new state
    */
   transact() {
+    this.lifecycle('willUpdate')
+
     this.clean()
     this.squash()
     this.rollforward()
+
+    this.lifecycle('didUpdate')
   },
 
   /**
@@ -146,7 +151,11 @@ Microcosm.prototype = {
     this.transactions = transactions
     this.base = state
 
-    return this.transact()
+    this.transact()
+
+    this.lifecycle('didReset')
+
+    return this
   },
 
   /**
@@ -225,9 +234,15 @@ Microcosm.prototype = {
     // Queue plugins and then notify that installation has finished
     install(this.plugins, error => {
       callbacks.forEach(cb => cb.call(this, error, this))
+
+      this.lifecycle('didStart')
     })
 
     return this
+  },
+
+  lifecycle(name) {
+    this.plugins.forEach(plugin => attempt(plugin, name, [ this ]))
   }
 }
 
