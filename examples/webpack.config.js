@@ -9,7 +9,8 @@ config.externals = {}
 config.entry = {
   'advanced' : './advanced/src/index',
   'simple-svg' : './simple-svg/index',
-  'chatbot' : './chatbot/index'
+  'chatbot' : './chatbot/index',
+  'no-ui' : './no-ui/index'
 }
 
 config.output = {

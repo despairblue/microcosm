@@ -1,48 +1,40 @@
 let signal  = require('./signal')
 let flatten = require('./flatten')
 
-function Transaction(action, params) {
-  this.action = action
-
-  // Ensure an array
-  this.params = flatten(params)
-  this.timestamp = Date.now()
-}
-
-Transaction.prototype = {
-
-  constructor: Transaction,
-
-  active : false,
-  body   : null,
-  done   : false,
-  error  : null,
-
-  isComplete() {
-    return this.error || this.done
-  },
-
-  run(resolve, reject, progress) {
-    return signal(this.action, this.params, (error, body, pending) => {
-      this.active = true
-      this.body   = body
-      this.done   = this.done || !pending
-      this.error  = error
-
-      if (error) {
-        reject(error)
-      }
-
-      progress()
-
-      if (this.isComplete()) {
-        // This is a neat trick to get around the promise try/catch
-        // https://github.com/then/promise/blob/master/src/done.js
-        setTimeout(resolve.bind(this, error, body), 0)
-      }
-    })
+exports.create = function (action, params, callback) {
+  if (process.env.NODE_ENV !== 'production' && typeof action !== 'function') {
+    throw TypeError(`Tried to create Transaction for ${ action }, but it is not a function.`)
   }
 
+  return {
+    action,
+    callback,
+    params: flatten(params),
+    active: false,
+    body: null,
+    done: false,
+    error: null
+  }
 }
 
-module.exports = Transaction
+exports.run = function (transaction, progress, reject, done, scope) {
+
+  return signal(transaction.action, transaction.params, function (error, body, pending) {
+    transaction.active = true
+    transaction.body   = body
+    transaction.error  = error
+    transaction.done   = transaction.done || !pending
+
+    if (error) {
+      reject.call(scope, transaction)
+    }
+
+    progress.call(scope, transaction)
+
+    if (transaction.error || transaction.done) {
+      // This is a neat trick to get around the promise try/catch
+      // https://github.com/then/promise/blob/master/src/done.js
+      setTimeout(done.bind(scope, error, body), 0)
+    }
+  })
+}

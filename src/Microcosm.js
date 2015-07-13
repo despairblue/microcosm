@@ -5,6 +5,7 @@ let flatten = require('./flatten')
 let install = require('./install')
 let plugin = require('./plugin')
 let remap = require('./remap')
+let attempt = require('./attempt')
 
 let noop = a => a
 
@@ -31,6 +32,7 @@ let Microcosm = function() {
    */
   this.state = this.base
 
+  this.started = false
   this.plugins = []
   this.stores = {}
   this.transactions = []
@@ -76,6 +78,7 @@ Microcosm.prototype = {
   clean(transaction) {
     if (this.shouldRejectTransaction(transaction)) {
       this.transactions = this.transactions.filter(t => t !== transaction)
+      this.lifecycle('transactionWasRejected', [ this, transaction ])
     }
   },
 
@@ -83,10 +86,16 @@ Microcosm.prototype = {
    * Starting from the beginning, consecutively fold complete transactions into
    * base state and remove them from the transaction list.
    */
-  squash() {
-    while (this.transactions.length && this.shouldTransactionMerge(this.transactions[0], this.transactions)) {
+  reconcile(transaction) {
+    let isFirst = this.transactions[0] === transaction
+
+    if (isFirst && this.shouldTransactionMerge(transaction, this.transactions)) {
       this.base = this.dispatch(this.base, this.transactions.shift())
     }
+
+    this.lifecycle('transactionDidUpdate', [ this, transaction ])
+
+    this.rollforward()
   },
 
   /**
@@ -98,19 +107,9 @@ Microcosm.prototype = {
 
     if (next !== this.state) {
       this.state = next
+      this.lifecycle('appDidUpdate', [ this ])
       this.emit(this.state)
     }
-  },
-
-  /**
-   * Engages the transaction life cycle.
-   *
-   * 1. Squash down complete transactions
-   * 2. Roll outstanding changes forward into new state
-   */
-  transact() {
-    this.squash()
-    this.rollforward()
   },
 
   /**
@@ -144,15 +143,13 @@ Microcosm.prototype = {
    * and the change will disappear from history.
    */
   push(action, params, callback=noop) {
-    if (process.env.NODE_ENV !== 'production' && typeof action !== 'function') {
-      throw TypeError(`Tried to push ${ action }, but is not a function.`)
-    }
-
-    let transaction = new Transaction(action, params)
+    let transaction = Transaction.create(action, params)
 
     this.transactions.push(transaction)
 
-    return transaction.run(callback, this.clean.bind(this, transaction), this.transact.bind(this))
+    this.lifecycle('transactionWasCreated', [ this, transaction ])
+
+    return Transaction.run(transaction, this.reconcile, this.clean, callback, this)
   },
 
   /**
@@ -163,7 +160,7 @@ Microcosm.prototype = {
     this.transactions = transactions
     this.base = state
 
-    return this.transact()
+    this.rollforward()
   },
 
   /**
@@ -241,7 +238,20 @@ Microcosm.prototype = {
 
     // Queue plugins and then notify that installation has finished
     install(this.plugins, error => {
+      this.started = true
+      this.lifecycle('appDidStart', [ this ])
+
       callbacks.forEach(cb => cb.call(this, error, this))
+    })
+
+    return this
+  },
+
+  lifecycle(method, args) {
+    if (!this.started) return this
+
+    this.plugins.forEach(plugin => {
+      attempt(plugin, method, args, undefined, plugin)
     })
 
     return this
